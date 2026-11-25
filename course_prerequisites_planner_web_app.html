@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Course Prerequisites Planner — DSA Project</title>
+  <!-- Load Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-inner flex-shrink-0">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white">
+            Course Prerequisites Planner
+          </h1>
+          <p class="text-xs text-slate-400">
+            DSA Project (DAG, HashMap &amp; Kahn’s Topological Sort) • Shreyansh Patel (RU-25-11395)
+          </p>
+        </div>
+      </div>
+
+      <!-- Complexity Badges -->
+      <div class="flex flex-wrap items-center gap-2 text-xs font-mono">
+        <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-sky-400 border border-slate-700" title="HashMap Lookup">
+          Lookup: O(1)
+        </span>
+        <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-emerald-400 border border-slate-700" title="Topological Sort & DFS">
+          Sort: O(V + E)
+        </span>
+        <button id="resetBtn" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer font-sans font-medium">
+          Reset Default
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 space-y-6">
+
+    <!-- Status / Toast Notification Banner -->
+    <div id="statusBanner" class="hidden rounded-xl p-4 border text-sm font-medium flex items-center justify-between transition-all">
+      <div class="flex items-center gap-2.5">
+        <span id="statusIcon"></span>
+        <span id="statusMessage"></span>
+      </div>
+      <button onclick="hideStatus()" class="text-xs opacity-70 hover:opacity-100 px-2 py-1 rounded">Dismiss</button>
+    </div>
+
+    <!-- Top Grid: Search Planner + Interactive SVG Dependency Graph -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Left Column: Target Course Search & Study Roadmap (5 cols) -->
+      <div class="lg:col-span-5 flex flex-col gap-6">
+        
+        <!-- Search & Input Card -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+              Target Course Roadmap
+            </h2>
+            <span class="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">GET /api/plan</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-4">
+            Enter a course code or click a quick-select chip below to compute the topological prerequisite sequence.
+          </p>
+
+          <div class="flex gap-2">
+            <div class="relative flex-1">
+              <input
+                type="text"
+                id="courseInput"
+                placeholder="e.g., AI401, CS301, CS201..."
+                autocomplete="off"
+                class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+              />
+            </div>
+            <button
+              id="generateBtn"
+              class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold shadow-sm transition cursor-pointer flex-shrink-0"
+            >
+              Plan
+            </button>
+          </div>
+
+          <!-- Quick-Select Course Chips -->
+          <div class="mt-4">
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Available Curriculum Courses</div>
+            <div id="courseChips" class="flex flex-wrap gap-1.5">
+              <!-- Populated dynamically via JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Generated Study Sequence Card -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 flex-1 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Ordered Study Sequence</h2>
+              <p id="roadmapSubtitle" class="text-xs text-slate-500">Topologically sorted via Kahn’s Algorithm</p>
+            </div>
+            <div id="totalCreditsBadge" class="hidden px-3 py-1 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold">
+              0 Credits
+            </div>
+          </div>
+
+          <!-- Roadmap Results List -->
+          <div id="roadmapList" class="space-y-2.5 flex-1">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Right Column: Interactive DAG Visualizer + Add Custom Course/Edge (7 cols) -->
+      <div class="lg:col-span-7 flex flex-col gap-6">
+
+        <!-- Interactive Visual Dependency Graph (SVG) -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Curriculum Directed Acyclic Graph (DAG)</h2>
+              <p class="text-xs text-slate-500">Click any node to inspect its prerequisite chain. Arrows point from prerequisite → dependent course.</p>
+            </div>
+            <div class="flex items-center gap-3 text-xs">
+              <span class="flex items-center gap-1.5 text-slate-600">
+                <span class="w-3 h-3 rounded-full bg-indigo-600 inline-block"></span> Target
+              </span>
+              <span class="flex items-center gap-1.5 text-slate-600">
+                <span class="w-3 h-3 rounded-full bg-sky-500 inline-block"></span> Prerequisite
+              </span>
+              <span class="flex items-center gap-1.5 text-slate-600">
+                <span class="w-3 h-3 rounded-full bg-slate-300 inline-block"></span> Unrelated
+              </span>
+            </div>
+          </div>
+
+          <div class="w-full bg-slate-50 rounded-xl border border-slate-200 overflow-hidden relative">
+            <svg id="dagSvg" class="w-full h-[360px] sm:h-[400px] block select-none" viewBox="0 0 760 400" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <marker id="arrow-default" viewBox="0 0 10 10" refX="26" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#cbd5e1" />
+                </marker>
+                <marker id="arrow-active" viewBox="0 0 10 10" refX="26" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#0284c7" />
+                </marker>
+              </defs>
+              <g id="edgesLayer"></g>
+              <g id="nodesLayer"></g>
+            </svg>
+          </div>
+        </section>
+
+        <!-- Dynamic Curriculum Builder (Add Course & Add Prerequisite Edge with Cycle Detection) -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Customize Curriculum Graph</h2>
+              <p class="text-xs text-slate-500">Add new vertices or directed edges (includes DFS cycle detection to preserve DAG integrity).</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Form 1: Add Course Vertex -->
+            <form id="addCourseForm" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+              <div class="text-xs font-bold uppercase tracking-wider text-slate-700">1. Add New Course Node</div>
+              <div class="grid grid-cols-3 gap-2">
+                <input type="text" id="newCourseCode" placeholder="Code (CS402)" required maxlength="8"
+                  class="col-span-2 px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <input type="number" id="newCourseCredits" placeholder="Credits" value="4" min="1" max="6" required
+                  class="px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+              <input type="text" id="newCourseTitle" placeholder="Course Title (e.g., Deep Learning)" required
+                class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <button type="submit" class="w-full py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition cursor-pointer">
+                + Add Course to HashMap
+              </button>
+            </form>
+
+            <!-- Form 2: Add Prerequisite Edge -->
+            <form id="addEdgeForm" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+              <div class="text-xs font-bold uppercase tracking-wider text-slate-700">2. Link Prerequisite Edge</div>
+              <div class="space-y-2">
+                <div>
+                  <label class="block text-[11px] text-slate-500 mb-0.5">Prerequisite Course (From)</label>
+                  <select id="prereqSelect" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                </div>
+                <div>
+                  <label class="block text-[11px] text-slate-500 mb-0.5">Target Course (To)</label>
+                  <select id="targetSelect" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                </div>
+              </div>
+              <button type="submit" class="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition cursor-pointer">
+                + Add Directed Dependency
+              </button>
+            </form>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- Bottom Section: DSA Data Structures & Algorithm Inspector -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-slate-100 pb-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">DSA Internal State &amp; Algorithm Inspector</h2>
+          <p class="text-xs text-slate-500">Live inspection of the underlying Adjacency List, HashMap, and Kahn’s In-Degree state.</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="switchInspectorTab('adj')" id="tab-adj" class="inspector-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition cursor-pointer">
+            Adjacency List &amp; HashMap
+          </button>
+          <button onclick="switchInspectorTab('indegree')" id="tab-indegree" class="inspector-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer">
+            Kahn’s In-Degree Trace
+          </button>
+          <button onclick="switchInspectorTab('complexity')" id="tab-complexity" class="inspector-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer">
+            Complexity Analysis
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 1: Adjacency List -->
+      <div id="panel-adj" class="inspector-panel">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 border-y border-slate-200 text-slate-600 font-semibold">
+                <th class="py-2.5 px-3">HashMap Key</th>
+                <th class="py-2.5 px-3">Course Title</th>
+                <th class="py-2.5 px-3">Credits</th>
+                <th class="py-2.5 px-3">Direct Prerequisites (Incoming)</th>
+                <th class="py-2.5 px-3">Adjacency List (Unlocks / Outgoing)</th>
+              </tr>
+            </thead>
+            <tbody id="adjTableBody" class="divide-y divide-slate-100 font-mono">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 2: Kahn's Algorithm In-Degree Trace -->
+      <div id="panel-indegree" class="inspector-panel hidden">
+        <p id="traceSummary" class="text-xs text-slate-600 mb-3">
+          Select a target course to inspect the subgraph in-degree calculations and queue processing order.
+        </p>
+        <div id="indegreeGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+      <!-- Tab 3: Time & Space Complexity -->
+      <div id="panel-complexity" class="inspector-panel hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="font-mono font-bold text-indigo-600 text-sm mb-1">O(1) Average Time</div>
+            <div class="font-bold text-slate-900 mb-1">Course Metadata Lookup</div>
+            <p class="text-slate-600 leading-relaxed">
+              <code>HashMap&lt;String, Course&gt;</code> maps normalized course codes directly to course objects for constant-time retrieval and validation.
+            </p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="font-mono font-bold text-sky-600 text-sm mb-1">O(V + E) Time</div>
+            <div class="font-bold text-slate-900 mb-1">DFS Ancestor Collection &amp; Kahn’s Sort</div>
+            <p class="text-slate-600 leading-relaxed">
+              Recursive Depth-First Search collects all required prerequisite vertices (V) and edges (E), followed by linear queue-based topological ordering.
+            </p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="font-mono font-bold text-emerald-600 text-sm mb-1">O(V + E) Space</div>
+            <div class="font-bold text-slate-900 mb-1">Adjacency List &amp; In-Degree Map</div>
+            <p class="text-slate-600 leading-relaxed">
+              Stores every course vertex once in the HashMap and each directed prerequisite edge once in the adjacency list.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-4 mt-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+      <span>Course Prerequisites Planner — Data Structures &amp; Algorithms (RU-200-01-00029)</span>
+      <span>Rungta International Skills University • Bhilai, Chhattisgarh</span>
+    </div>
+  </footer>
+
+  <!-- Core JavaScript Application (Mirroring Java CourseGraph & PlannerService) -->
+  <script>
+    /**
+     * Course Model class mirroring com.risu.planner.model.Course
+     */
+    class Course {
+      constructor(code, title, credits) {
+        this.code = code;
+        this.title = title;
+        this.credits = credits;
+        this.prerequisites = [];
+      }
+
+      addPrerequisite(prereqCode) {
+        if (!this.prerequisites.includes(prereqCode)) {
+          this.prerequisites.push(prereqCode);
+        }
+      }
+    }
+
+    /**
+     * Directed Acyclic Graph (DAG) & Kahn's Topological Sort
+     * Mirroring com.risu.planner.dsa.CourseGraph
+     */
+    class CourseGraph {
+      constructor() {
+        this.courseMap = new Map(); // HashMap<String, Course>
+        this.adjList = new Map();   // HashMap<String, List<String>>
+      }
+
+      addCourse(course) {
+        this.courseMap.set(course.code, course);
+        if (!this.adjList.has(course.code)) {
+          this.adjList.set(course.code, []);
+        }
+      }
+
+      hasCourse(code) {
+        return this.courseMap.has(code);
+      }
+
+      getCourse(code) {
+        return this.courseMap.get(code);
+      }
+
+      getAllCourses() {
+        return Array.from(this.courseMap.values());
+      }
+
+      /**
+       * Checks if adding edge (prereqCode -> targetCourseCode) creates a cycle.
+       * A cycle occurs if targetCourseCode can already reach prereqCode.
+       */
+      wouldCreateCycle(prereqCode, targetCourseCode) {
+        if (prereqCode === targetCourseCode) return true;
+        const visited = new Set();
+        const stack = [targetCourseCode];
+        while (stack.length > 0) {
+          const curr = stack.pop();
+          if (curr === prereqCode) return true;
+          if (!visited.has(curr)) {
+            visited.add(curr);
+            const neighbors = this.adjList.get(curr) || [];
+            for (const next of neighbors) {
+              stack.push(next);
+            }
+          }
+        }
+        return false;
+      }
+
+      addDependency(prereqCode, targetCourseCode) {
+        if (!this.courseMap.has(prereqCode) || !this.courseMap.has(targetCourseCode)) {
+          return { ok: false, error: "One or both course codes do not exist." };
+        }
+        if (this.adjList.get(prereqCode).includes(targetCourseCode)) {
+          return { ok: false, error: `${prereqCode} is already a prerequisite for ${targetCourseCode}.` };
+        }
+        if (this.wouldCreateCycle(prereqCode, targetCourseCode)) {
+          return { ok: false, error: `Cycle detected! ${targetCourseCode} already precedes ${prereqCode}.` };
+        }
+
+        this.adjList.get(prereqCode).push(targetCourseCode);
+        this.courseMap.get(targetCourseCode).addPrerequisite(prereqCode);
+        return { ok: true };
+      }
+
+      collectPrerequisites(courseCode, visited) {
+        if (visited.has(courseCode)) return;
+        visited.add(courseCode);
+        const course = this.courseMap.get(courseCode);
+        if (course) {
+          for (const prereq of course.prerequisites) {
+            this.collectPrerequisites(prereq, visited);
+          }
+        }
+      }
+
+      /**
+       * Kahn's Algorithm Topological Sort on the prerequisite subgraph
+       */
+      getStudyPlan(targetCode) {
+        if (!this.courseMap.has(targetCode)) {
+          return { plan: [], initialInDegrees: {} };
+        }
+
+        // 1. Collect all required ancestor nodes via DFS
+        const requiredCodes = new Set();
+        this.collectPrerequisites(targetCode, requiredCodes);
+
+        // 2. Compute In-Degrees for the subgraph
+        const inDegree = new Map();
+        for (const code of requiredCodes) {
+          inDegree.set(code, 0);
+        }
+
+        for (const code of requiredCodes) {
+          const dependents = this.adjList.get(code) || [];
+          for (const dependent of dependents) {
+            if (requiredCodes.has(dependent)) {
+              inDegree.set(dependent, inDegree.get(dependent) + 1);
+            }
+          }
+        }
+
+        const initialInDegrees = Object.fromEntries(inDegree);
+
+        // 3. Enqueue all nodes with In-Degree == 0
+        const queue = [];
+        for (const [code, deg] of inDegree.entries()) {
+          if (deg === 0) {
+            queue.push(code);
+          }
+        }
+
+        // 4. Process queue in topological order
+        const orderedPlan = [];
+        while (queue.length > 0) {
+          const current = queue.shift();
+          orderedPlan.push(this.courseMap.get(current));
+
+          const nextCourses = this.adjList.get(current) || [];
+          for (const nextCourse of nextCourses) {
+            if (requiredCodes.has(nextCourse)) {
+              const updated = inDegree.get(nextCourse) - 1;
+              inDegree.set(nextCourse, updated);
+              if (updated === 0) {
+                queue.push(nextCourse);
+              }
+            }
+          }
+        }
+
+        return { plan: orderedPlan, initialInDegrees };
+      }
+    }
+
+    // ==================== APPLICATION STATE ====================
+    let graph = new CourseGraph();
+    let activeTarget = "AI401";
+    let activePlanCodes = new Set();
+    let activeInDegrees = {};
+
+    function normalizeInput(raw) {
+      if (!raw) return "";
+      return raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    }
+
+    function loadDefaultCurriculum() {
+      graph = new CourseGraph();
+      graph.addCourse(new Course("CS101", "Programming Fundamentals", 4));
+      graph.addCourse(new Course("MA101", "Discrete Mathematics", 4));
+      graph.addCourse(new Course("CS102", "Object-Oriented Programming", 4));
+      graph.addCourse(new Course("CS201", "Data Structures and Algorithms", 4));
+      graph.addCourse(new Course("CS202", "Database Management Systems", 3));
+      graph.addCourse(new Course("CS301", "Design and Analysis of Algorithms", 4));
+      graph.addCourse(new Course("AI301", "Artificial Intelligence", 4));
+      graph.addCourse(new Course("AI401", "Machine Learning", 4));
+
+      graph.addDependency("CS101", "CS102");
+      graph.addDependency("CS102", "CS201");
+      graph.addDependency("MA101", "CS201");
+      graph.addDependency("CS102", "CS202");
+      graph.addDependency("CS201", "CS301");
+      graph.addDependency("CS201", "AI301");
+      graph.addDependency("MA101", "AI301");
+      graph.addDependency("AI301", "AI401");
+      graph.addDependency("CS301", "AI401");
+    }
+
+    // ==================== UI RENDERING ====================
+    function showStatus(message, type = "info") {
+      const banner = document.getElementById("statusBanner");
+      const msgEl = document.getElementById("statusMessage");
+      const iconEl = document.getElementById("statusIcon");
+
+      banner.className = "rounded-xl p-4 border text-sm font-medium flex items-center justify-between transition-all";
+      if (type === "error") {
+        banner.classList.add("bg-rose-50", "border-rose-200", "text-rose-800");
+        iconEl.textContent = "⚠️";
+      } else if (type === "success") {
+        banner.classList.add("bg-emerald-50", "border-emerald-200", "text-emerald-800");
+        iconEl.textContent = "✅";
+      } else {
+        banner.classList.add("bg-sky-50", "border-sky-200", "text-sky-800");
+        iconEl.textContent = "ℹ️";
+      }
+
+      msgEl.textContent = message;
+      banner.classList.remove("hidden");
+    }
+
+    function hideStatus() {
+      document.getElementById("statusBanner").classList.add("hidden");
+    }
+
+    function renderChipsAndSelects() {
+      const courses = graph.getAllCourses();
+      const chipsContainer = document.getElementById("courseChips");
+      const prereqSelect = document.getElementById("prereqSelect");
+      const targetSelect = document.getElementById("targetSelect");
+
+      chipsContainer.innerHTML = courses.map(c => {
+        const isSelected = c.code === activeTarget;
+        const baseClasses = "px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition cursor-pointer border";
+        const activeClasses = isSelected
+          ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+          : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200";
+        return `<button type="button" onclick="selectCourse('${c.code}')" class="${baseClasses} ${activeClasses}" title="${c.title}">${c.code}</button>`;
+      }).join("");
+
+      const optionsHtml = courses.map(c => `<option value="${c.code}">${c.code} — ${c.title}</option>`).join("");
+      prereqSelect.innerHTML = optionsHtml;
+      targetSelect.innerHTML = optionsHtml;
+      if (courses.length > 1) {
+        targetSelect.selectedIndex = courses.length - 1;
+      }
+    }
+
+    function selectCourse(code) {
+      document.getElementById("courseInput").value = code;
+      runPlanner(code);
+    }
+
+    function runPlanner(rawInput) {
+      const normalized = normalizeInput(rawInput);
+      const roadmapList = document.getElementById("roadmapList");
+      const totalCreditsBadge = document.getElementById("totalCreditsBadge");
+      const roadmapSubtitle = document.getElementById("roadmapSubtitle");
+
+      if (!normalized) {
+        activeTarget = "";
+        activePlanCodes = new Set();
+        totalCreditsBadge.classList.add("hidden");
+        roadmapList.innerHTML = `
+          <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+            Please enter a valid course code (e.g., AI401, CS301, CS201).
+          </div>`;
+        renderDAG();
+        return;
+      }
+
+      if (!graph.hasCourse(normalized)) {
+        activeTarget = normalized;
+        activePlanCodes = new Set();
+        totalCreditsBadge.classList.add("hidden");
+        roadmapSubtitle.textContent = `Query: "${normalized}"`;
+        roadmapList.innerHTML = `
+          <div class="p-5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium text-center">
+            Course <span class="font-mono font-bold">"${normalized}"</span> not found in curriculum.
+          </div>`;
+        renderChipsAndSelects();
+        renderDAG();
+        return;
+      }
+
+      hideStatus();
+      activeTarget = normalized;
+      const { plan, initialInDegrees } = graph.getStudyPlan(normalized);
+      activePlanCodes = new Set(plan.map(c => c.code));
+      activeInDegrees = initialInDegrees;
+
+      const totalCredits = plan.reduce((sum, c) => sum + c.credits, 0);
+      totalCreditsBadge.textContent = `${plan.length} Courses • ${totalCredits} Credits`;
+      totalCreditsBadge.classList.remove("hidden");
+      roadmapSubtitle.textContent = `Target: ${normalized} — ${graph.getCourse(normalized).title}`;
+
+      roadmapList.innerHTML = plan.map((course, idx) => {
+        const isTarget = course.code === normalized;
+        const borderClass = isTarget ? "border-indigo-600 bg-indigo-50/60" : "border-sky-500 bg-slate-50";
+        const badgeClass = isTarget ? "bg-indigo-600 text-white" : "bg-sky-600 text-white";
+        const prereqText = course.prerequisites.length > 0 ? course.prerequisites.join(", ") : "None (Foundation)";
+
+        return `
+          <div class="border-l-4 ${borderClass} rounded-r-xl p-3.5 border border-l-4 border-slate-200 flex items-center justify-between gap-3 transition">
+            <div class="flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full ${badgeClass} text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                ${idx + 1}
+              </span>
+              <div>
+                <div class="text-sm font-bold text-slate-900">
+                  <span class="font-mono text-indigo-700">${course.code}</span> — ${course.title}
+                </div>
+                <div class="text-xs text-slate-500 mt-0.5">
+                  Prerequisites: <span class="font-mono text-slate-700">${prereqText}</span>
+                </div>
+              </div>
+            </div>
+            <span class="text-xs font-mono font-semibold px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 flex-shrink-0">
+              ${course.credits} Cr
+            </span>
+          </div>
+        `;
+      }).join("");
+
+      renderChipsAndSelects();
+      renderDAG();
+      renderInspector();
+    }
+
+    /**
+     * Compute topological depth levels for clean layered DAG visualization
+     */
+    function computeNodePositions() {
+      const courses = graph.getAllCourses();
+      const levels = new Map();
+
+      function getLevel(code, visiting = new Set()) {
+        if (levels.has(code)) return levels.get(code);
+        if (visiting.has(code)) return 0;
+        visiting.add(code);
+        const course = graph.getCourse(code);
+        if (!course || course.prerequisites.length === 0) {
+          levels.set(code, 0);
+          return 0;
+        }
+        let maxPrereqLevel = 0;
+        for (const p of course.prerequisites) {
+          maxPrereqLevel = Math.max(maxPrereqLevel, getLevel(p, visiting) + 1);
+        }
+        levels.set(code, maxPrereqLevel);
+        return maxPrereqLevel;
+      }
+
+      courses.forEach(c => getLevel(c.code));
+
+      // Group courses by level
+      const columns = new Map();
+      let maxCol = 0;
+      for (const [code, lvl] of levels.entries()) {
+        maxCol = Math.max(maxCol, lvl);
+        if (!columns.has(lvl)) columns.set(lvl, []);
+        columns.get(lvl).push(code);
+      }
+
+      const width = 760;
+      const height = 400;
+      const padX = 85;
+      const padY = 55;
+      const usableW = width - padX * 2;
+      const usableH = height - padY * 2;
+
+      const positions = new Map();
+      for (let col = 0; col <= maxCol; col++) {
+        const colNodes = columns.get(col) || [];
+        const x = maxCol === 0 ? width / 2 : padX + (col / maxCol) * usableW;
+        colNodes.forEach((code, idx) => {
+          const y = colNodes.length === 1
+            ? height / 2
+            : padY + (idx / (colNodes.length - 1)) * usableH;
+          positions.set(code, { x, y });
+        });
+      }
+
+      return positions;
+    }
+
+    function renderDAG() {
+      const edgesLayer = document.getElementById("edgesLayer");
+      const nodesLayer = document.getElementById("nodesLayer");
+      const positions = computeNodePositions();
+      const courses = graph.getAllCourses();
+
+      let edgesHtml = "";
+      let nodesHtml = "";
+
+      // Draw directed edges
+      for (const course of courses) {
+        const fromPos = positions.get(course.code);
+        const dependents = graph.adjList.get(course.code) || [];
+        for (const depCode of dependents) {
+          const toPos = positions.get(depCode);
+          if (!fromPos || !toPos) continue;
+
+          const isEdgeActive = activePlanCodes.has(course.code) && activePlanCodes.has(depCode);
+          const stroke = isEdgeActive ? "#0284c7" : "#cbd5e1";
+          const strokeWidth = isEdgeActive ? "2.5" : "1.6";
+          const marker = isEdgeActive ? "url(#arrow-active)" : "url(#arrow-default)";
+
+          edgesHtml += `
+            <line x1="${fromPos.x}" y1="${fromPos.y}" x2="${toPos.x}" y2="${toPos.y}"
+              stroke="${stroke}" stroke-width="${strokeWidth}" marker-end="${marker}" />
+          `;
+        }
+      }
+
+      // Draw course nodes
+      for (const course of courses) {
+        const pos = positions.get(course.code);
+        if (!pos) continue;
+
+        const isTarget = course.code === activeTarget;
+        const isPrereq = activePlanCodes.has(course.code) && !isTarget;
+
+        let fill = "#ffffff";
+        let stroke = "#94a3b8";
+        let textFill = "#1e293b";
+        let strokeWidth = "2";
+
+        if (isTarget) {
+          fill = "#4f46e5";
+          stroke = "#312e81";
+          textFill = "#ffffff";
+          strokeWidth = "3";
+        } else if (isPrereq) {
+          fill = "#0284c7";
+          stroke = "#0369a1";
+          textFill = "#ffffff";
+          strokeWidth = "2.5";
+        }
+
+        nodesHtml += `
+          <g class="cursor-pointer transition-transform" onclick="selectCourse('${course.code}')">
+            <circle cx="${pos.x}" cy="${pos.y}" r="24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+            <text x="${pos.x}" y="${pos.y + 4}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="${textFill}">
+              ${course.code}
+            </text>
+            <text x="${pos.x}" y="${pos.y + 38}" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" font-weight="600" fill="#475569">
+              ${course.title.length > 22 ? course.title.slice(0, 20) + "…" : course.title}
+            </text>
+          </g>
+        `;
+      }
+
+      edgesLayer.innerHTML = edgesHtml;
+      nodesLayer.innerHTML = nodesHtml;
+    }
+
+    function renderInspector() {
+      const courses = graph.getAllCourses();
+      const adjBody = document.getElementById("adjTableBody");
+
+      adjBody.innerHTML = courses.map(c => {
+        const outgoing = graph.adjList.get(c.code) || [];
+        const isHighlighted = activePlanCodes.has(c.code);
+        return `
+          <tr class="${isHighlighted ? 'bg-indigo-50/50' : ''}">
+            <td class="py-2.5 px-3 font-bold text-indigo-700">${c.code}</td>
+            <td class="py-2.5 px-3 font-sans text-slate-800">${c.title}</td>
+            <td class="py-2.5 px-3 text-slate-600">${c.credits}</td>
+            <td class="py-2.5 px-3 text-slate-600">${c.prerequisites.length ? c.prerequisites.join(", ") : "[]"}</td>
+            <td class="py-2.5 px-3 text-sky-700">[${outgoing.join(", ")}]</td>
+          </tr>
+        `;
+      }).join("");
+
+      // Kahn's Algorithm In-Degree Cards
+      const traceSummary = document.getElementById("traceSummary");
+      const indegreeGrid = document.getElementById("indegreeGrid");
+      const entries = Object.entries(activeInDegrees);
+
+      if (entries.length === 0) {
+        traceSummary.textContent = "No active subgraph selected.";
+        indegreeGrid.innerHTML = "";
+      } else {
+        traceSummary.innerHTML = `Subgraph In-Degrees computed for target <strong class="font-mono text-indigo-700">${activeTarget}</strong> (Nodes with In-Degree 0 enter the Kahn's Queue first):`;
+        indegreeGrid.innerHTML = entries.map(([code, deg]) => `
+          <div class="p-3 rounded-xl border ${deg === 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'} flex items-center justify-between">
+            <div>
+              <div class="font-mono font-bold text-sm text-slate-900">${code}</div>
+              <div class="text-[11px] text-slate-500">${deg === 0 ? 'Initial Queue Entry' : 'Waits for prereqs'}</div>
+            </div>
+            <span class="px-2.5 py-1 rounded-lg font-mono text-xs font-bold ${deg === 0 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-800'}">
+              inDegree: ${deg}
+            </span>
+          </div>
+        `).join("");
+      }
+    }
+
+    function switchInspectorTab(tabId) {
+      document.querySelectorAll(".inspector-panel").forEach(p => p.classList.add("hidden"));
+      document.querySelectorAll(".inspector-tab").forEach(btn => {
+        btn.classList.remove("bg-indigo-600", "text-white");
+        btn.classList.add("bg-slate-100", "text-slate-700");
+      });
+
+      document.getElementById(`panel-${tabId}`).classList.remove("hidden");
+      const activeBtn = document.getElementById(`tab-${tabId}`);
+      activeBtn.classList.remove("bg-slate-100", "text-slate-700");
+      activeBtn.classList.add("bg-indigo-600", "text-white");
+    }
+
+    // ==================== EVENT LISTENERS ====================
+    document.getElementById("generateBtn").addEventListener("click", () => {
+      runPlanner(document.getElementById("courseInput").value);
+    });
+
+    document.getElementById("courseInput").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        runPlanner(e.target.value);
+      }
+    });
+
+    document.getElementById("addCourseForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const code = normalizeInput(document.getElementById("newCourseCode").value);
+      const title = document.getElementById("newCourseTitle").value.trim();
+      const credits = parseInt(document.getElementById("newCourseCredits").value, 10) || 4;
+
+      if (!code || !title) return;
+      if (graph.hasCourse(code)) {
+        showStatus(`Course code "${code}" already exists in the HashMap.`, "error");
+        return;
+      }
+
+      graph.addCourse(new Course(code, title, credits));
+      document.getElementById("newCourseCode").value = "";
+      document.getElementById("newCourseTitle").value = "";
+      showStatus(`Added course ${code} — ${title} (${credits} Credits) to curriculum.`, "success");
+      selectCourse(code);
+    });
+
+    document.getElementById("addEdgeForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const prereq = document.getElementById("prereqSelect").value;
+      const target = document.getElementById("targetSelect").value;
+
+      const result = graph.addDependency(prereq, target);
+      if (!result.ok) {
+        showStatus(result.error, "error");
+        return;
+      }
+
+      showStatus(`Linked prerequisite: ${prereq} → ${target}.`, "success");
+      selectCourse(target);
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      loadDefaultCurriculum();
+      showStatus("Curriculum reset to default CS & AI courses.", "info");
+      selectCourse("AI401");
+    });
+
+    // Initialize App on Load
+    window.addEventListener("DOMContentLoaded", () => {
+      loadDefaultCurriculum();
+      selectCourse("AI401");
+    });
+  </script>
+</body>
+</html>
